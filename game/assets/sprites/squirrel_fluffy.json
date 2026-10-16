@@ -1,0 +1,60 @@
+{
+ "w": 30,
+ "h": 24,
+ "anims": {
+  "burrow": {
+   "row": 0,
+   "n": 3,
+   "fps": 6,
+   "loop": false
+  },
+  "idle": {
+   "row": 1,
+   "n": 2,
+   "fps": 3.3,
+   "loop": true
+  },
+  "run": {
+   "row": 2,
+   "n": 4,
+   "fps": 9,
+   "loop": true
+  },
+  "sit": {
+   "row": 3,
+   "n": 2,
+   "fps": 2.5,
+   "loop": true
+  },
+  "eat": {
+   "row": 4,
+   "n": 2,
+   "fps": 5,
+   "loop": true
+  },
+  "dig": {
+   "row": 5,
+   "n": 3,
+   "fps": 7,
+   "loop": true
+  },
+  "climb": {
+   "row": 6,
+   "n": 2,
+   "fps": 6,
+   "loop": true
+  },
+  "hurt": {
+   "row": 7,
+   "n": 1,
+   "fps": 1,
+   "loop": false
+  },
+  "fight": {
+   "row": 8,
+   "n": 2,
+   "fps": 6,
+   "loop": true
+  }
+ }
+}

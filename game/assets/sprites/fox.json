@@ -1,0 +1,30 @@
+{
+ "w": 40,
+ "h": 18,
+ "anims": {
+  "walk": {
+   "row": 0,
+   "n": 4,
+   "fps": 5,
+   "loop": true
+  },
+  "run": {
+   "row": 1,
+   "n": 4,
+   "fps": 10,
+   "loop": true
+  },
+  "pounce": {
+   "row": 2,
+   "n": 2,
+   "fps": 6,
+   "loop": false
+  },
+  "sniff": {
+   "row": 3,
+   "n": 2,
+   "fps": 3,
+   "loop": true
+  }
+ }
+}

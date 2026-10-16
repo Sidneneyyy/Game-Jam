@@ -1,0 +1,24 @@
+{
+ "w": 48,
+ "h": 44,
+ "anims": {
+  "dive": {
+   "row": 0,
+   "n": 3,
+   "fps": 10,
+   "loop": false
+  },
+  "strike": {
+   "row": 1,
+   "n": 1,
+   "fps": 1,
+   "loop": false
+  },
+  "rise": {
+   "row": 2,
+   "n": 2,
+   "fps": 8,
+   "loop": true
+  }
+ }
+}

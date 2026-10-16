@@ -1,0 +1,856 @@
+<title>Forgotten Acorns</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Pixelify+Sans:wght@500;700&family=Silkscreen&display=swap">
+<style>
+/* Layout: one centred "window" — HUD strip, 16:9 pixel canvas with overlays, touch pad beneath. Deliberate single dark look: walnut bark. */
+:root{
+  --bark:#1f1813; --bark-2:#2b2119; --bark-3:#3d2f24; --line:#55432f;
+  --cream:#f2e7d3; --dim:#bfa98c;
+  --acorn:#e0973f; --moss:#93b45c; --frost:#bcd7e8; --danger:#e65a43;
+  --sp:#8fc35f; --su:#e1c54a; --fa:#d8692c; --wi:#bcd7e8;
+  --f-display:"Pixelify Sans","Courier New",monospace;
+  --f-body:"Atkinson Hyperlegible",system-ui,sans-serif;
+  --f-pixel:"Silkscreen","Courier New",monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bark);color:var(--cream);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px;
+  box-sizing:border-box;display:flex;justify-content:center;align-items:flex-start;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+.wrap{width:min(100%,max(320px,calc((100vh - 200px)*1.7778)),1200px);display:flex;flex-direction:column;gap:8px}
+/* HUD */
+.hud{display:grid;grid-template-columns:auto 1fr auto;gap:10px 16px;align-items:center;background:var(--bark-2);border:2px solid var(--line);padding:8px 12px;font-family:var(--f-pixel);font-size:12px;letter-spacing:.04em}
+.hud .grp{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border:2px solid currentColor}
+.chip i{width:8px;height:8px;background:currentColor;display:block}
+.year{position:relative;height:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:2px;min-width:120px}
+.year span{display:flex;align-items:center;justify-content:center;font-size:9px;color:#1f1813;opacity:.55}
+.year span.on{opacity:1}
+.year .s0{background:var(--sp)}.year .s1{background:var(--su)}.year .s2{background:var(--fa)}.year .s3{background:var(--wi)}
+.playhead{position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--cream);box-shadow:0 0 0 1px var(--bark);transform:translateX(-1px)}
+.bar{width:110px;height:12px;border:2px solid var(--line);background:var(--bark);position:relative}
+.bar b{position:absolute;inset:0 auto 0 0;background:var(--moss)}
+.bar.low b{background:var(--acorn)} .bar.crit b{background:var(--danger)}
+.bar.crit{animation:blink .6s steps(2) infinite}
+@keyframes blink{50%{border-color:var(--danger)}}
+.slots{display:flex;gap:3px}
+.slots s{width:9px;height:11px;border:2px solid var(--line);border-radius:4px 4px 5px 5px;text-decoration:none;display:block}
+.slots s.f{background:var(--acorn);border-color:#8a5424}
+.num{font-variant-numeric:tabular-nums}
+.warn{grid-column:1/-1;color:var(--acorn);font-size:11px;min-height:0}
+.warn:empty{display:none}
+.iconbtn{font:inherit;color:var(--cream);background:var(--bark-3);border:2px solid var(--line);padding:3px 8px;cursor:pointer}
+.iconbtn:hover{border-color:var(--acorn)}
+/* stage */
+.stage{position:relative;width:100%;aspect-ratio:16/9;max-width:100%;border:2px solid var(--line);background:#000;overflow:hidden}
+canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;outline:none}
+.banner{position:absolute;left:50%;top:10%;transform:translateX(-50%);text-align:center;pointer-events:none;width:min(92%,560px);
+  background:rgba(31,24,19,.86);border:2px solid var(--line);padding:10px 16px;opacity:0;transition:opacity .35s}
+.banner.show{opacity:1}
+.banner h2{margin:0;font-family:var(--f-display);font-size:clamp(22px,4vw,40px);line-height:1.05;text-wrap:balance}
+.banner p{margin:4px 0 0;font-size:clamp(12px,1.6vw,15px);color:var(--cream)}
+.banner .extra{color:var(--acorn);font-family:var(--f-pixel);font-size:clamp(10px,1.3vw,12px);margin-top:6px}
+.ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(24,18,14,.72);padding:12px;overflow:auto}
+.card{background:var(--bark-2);border:2px solid var(--line);box-shadow:6px 6px 0 rgba(0,0,0,.35);padding:clamp(14px,3vw,26px);width:min(100%,560px);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.card h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:clamp(30px,6vw,56px);line-height:.95;color:var(--acorn);text-wrap:balance}
+.card h2{margin:0;font-family:var(--f-display);font-size:clamp(22px,4vw,34px);line-height:1;text-wrap:balance}
+.card p{margin:0;max-width:62ch}
+.tag{font-size:clamp(13px,1.8vw,16px);color:var(--cream)}
+.eyebrow{font-family:var(--f-pixel);font-size:11px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font-family:var(--f-pixel);font-size:13px;letter-spacing:.05em;padding:9px 14px;border:2px solid var(--line);background:var(--bark-3);color:var(--cream);cursor:pointer}
+.btn.primary{background:var(--acorn);color:#2a1a0e;border-color:#f2b46a}
+.btn:hover{border-color:var(--cream)}
+.btn:focus-visible,.iconbtn:focus-visible,.key:focus-visible,.tog:focus-visible,canvas:focus-visible,.pad button:focus-visible{outline:3px solid var(--frost);outline-offset:2px}
+.how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;font-size:13px}
+.how div{display:flex;gap:8px;align-items:baseline;min-width:0}
+kbd{font-family:var(--f-pixel);font-size:10px;padding:1px 5px;border:2px solid var(--line);background:var(--bark);white-space:nowrap}
+.seasons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;font-size:12px}
+.seasons div{border-top:4px solid;padding-top:4px;min-width:0}
+.seasons b{font-family:var(--f-pixel);font-size:11px;font-weight:400;display:block}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stats div{background:var(--bark);border:2px solid var(--line);padding:6px 8px}
+.stats b{display:block;font-family:var(--f-display);font-size:24px;color:var(--acorn);font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--dim)}
+.small{font-size:12px;color:var(--dim)}
+.set{display:flex;flex-direction:column;gap:8px}
+.tog{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:var(--cream);background:var(--bark);border:2px solid var(--line);padding:8px 10px;cursor:pointer}
+.tog em{font-style:normal;font-family:var(--f-pixel);font-size:11px;padding:2px 6px;border:2px solid var(--line);color:var(--dim)}
+.tog[aria-pressed="true"] em{background:var(--moss);color:#1f1813;border-color:var(--moss)}
+.tog small{display:block;color:var(--dim);font-size:12px}
+.keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.key{font:inherit;font-size:12px;color:var(--cream);background:var(--bark);border:2px solid var(--line);padding:6px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.key b{font-family:var(--f-pixel);font-weight:400;font-size:12px;color:var(--acorn)}
+.key.wait{border-color:var(--acorn)}
+/* touch pad */
+.pad{display:none;justify-content:space-between;align-items:center;gap:12px;user-select:none;-webkit-user-select:none;touch-action:none}
+.pad.on{display:flex}
+.dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:4px}
+.pad button{font-family:var(--f-pixel);font-size:13px;color:var(--cream);background:var(--bark-3);border:2px solid var(--line);touch-action:none}
+.pad button:active,.pad button.held{background:var(--acorn);color:#1f1813}
+.dpad .u{grid-area:1/2}.dpad .l{grid-area:2/1}.dpad .r{grid-area:2/3}.dpad .d{grid-area:3/2}
+.abtn{display:flex;gap:10px}
+.abtn button{width:74px;height:74px;border-radius:50%}
+.foot{font-size:12px;color:var(--dim);text-align:center}
+@media (max-width:640px){
+  .hud{grid-template-columns:1fr;font-size:11px}
+  .how{grid-template-columns:1fr}
+  .seasons{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .keys{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stats b{font-size:20px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="hud" aria-live="off">
+    <div class="grp">
+      <span class="chip" id="hSeason" style="color:var(--sp)"><i></i><span id="hSeasonName">Spring</span></span>
+      <span id="hYear" class="num">Year 1</span>
+    </div>
+    <div class="grp" style="flex-wrap:nowrap">
+      <div class="year" id="hYearBar" aria-label="Season progress" style="flex:1">
+        <span class="s0">SP</span><span class="s1">SU</span><span class="s2">FA</span><span class="s3">WI</span>
+        <div class="playhead" id="hPlay"></div>
+      </div>
+    </div>
+    <div class="grp">
+      <span>Energy</span><div class="bar" id="hBar"><b id="hFill"></b></div><span class="num" id="hEn">75</span>
+      <div class="slots" id="hSlots" aria-label="Acorns in cheeks"><s></s><s></s><s></s><s></s></div>
+      <span class="num" id="hTrees" title="Oaks and sprouts in your grove">Oaks 3</span>
+      <button class="iconbtn" id="bPause" aria-label="Pause">II</button>
+      <button class="iconbtn" id="bSound" aria-label="Toggle sound">SND</button>
+    </div>
+    <div class="warn" id="hWarn"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" width="320" height="180" tabindex="0" aria-label="Game view"></canvas>
+    <div class="banner" id="banner"><h2 id="bnT">Spring</h2><p id="bnP"></p><div class="extra" id="bnX"></div></div>
+
+    <div class="ov" id="ovTitle">
+      <div class="card">
+        <div class="eyebrow">A Four Seasons game</div>
+        <h1>Forgotten Acorns</h1>
+        <p class="tag">You are a red squirrel. Bury acorns to survive the winter. Every cache you never dig up becomes an oak, and oaks feed you next year.</p>
+        <div class="seasons">
+          <div style="border-color:var(--sp)"><b>Spring</b>Rain. Leftover caches sprout when it ends.</div>
+          <div style="border-color:var(--su)"><b>Summer</b>Heat and a hawk. Hide in oak shade.</div>
+          <div style="border-color:var(--fa)"><b>Fall</b>Acorns drop. Bury them fast.</div>
+          <div style="border-color:var(--wi)"><b>Winter</b>Frozen ground. Find caches by scent.</div>
+        </div>
+        <div class="how" id="howKeys"></div>
+        <p class="small">Survive 3 years to see your grove. Best grove: <span id="best" class="num">0</span> oaks.</p>
+        <div class="row">
+          <button class="btn primary" id="bPlay">Play</button>
+          <button class="btn" id="bSet1">Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ov" id="ovPause" hidden>
+      <div class="card">
+        <h2>Paused</h2>
+        <div class="how" id="howKeys2"></div>
+        <div class="row">
+          <button class="btn primary" id="bResume">Resume</button>
+          <button class="btn" id="bSet2">Settings</button>
+          <button class="btn" id="bRestart">Restart</button>
+          <button class="btn" id="bQuit">Title</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ov" id="ovEnd" hidden>
+      <div class="card">
+        <div class="eyebrow" id="endEye">Game over</div>
+        <h2 id="endT">Out of energy</h2>
+        <p id="endP"></p>
+        <div class="stats" id="endStats"></div>
+        <div class="row">
+          <button class="btn primary" id="bAgain">Play again</button>
+          <button class="btn" id="bEndless" hidden>Keep going</button>
+          <button class="btn" id="bQuit2">Title</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ov" id="ovSet" hidden>
+      <div class="card">
+        <h2>Settings</h2>
+        <div class="set">
+          <button class="tog" id="tAssist" aria-pressed="false"><span>Assist mode<small>Energy drains 30% slower. Buried caches stay marked in winter. Wider light in the snow.</small></span><em>OFF</em></button>
+          <button class="tog" id="tContrast" aria-pressed="false"><span>High contrast<small>Outlines acorns, berries, caches and the hawk so they never rely on colour alone.</small></span><em>OFF</em></button>
+          <button class="tog" id="tCalm" aria-pressed="false"><span>Reduced motion<small>No screen shake, lighter weather.</small></span><em>OFF</em></button>
+          <button class="tog" id="tSound" aria-pressed="true"><span>Sound<small>Music and effects. Press M any time.</small></span><em>ON</em></button>
+        </div>
+        <div class="eyebrow">Controls: click one, then press a key</div>
+        <div class="keys" id="keys"></div>
+        <p class="small">Arrow keys, J (dig or bury) and K (eat) always work too. Esc or P pauses.</p>
+        <div class="row"><button class="btn primary" id="bBack">Back</button><button class="btn" id="bResetKeys">Reset keys</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pad" id="pad">
+    <div class="dpad">
+      <button class="u" data-a="up" aria-label="Up">▲</button>
+      <button class="l" data-a="left" aria-label="Left">◀</button>
+      <button class="r" data-a="right" aria-label="Right">▶</button>
+      <button class="d" data-a="down" aria-label="Down">▼</button>
+    </div>
+    <div class="abtn">
+      <button data-a="eat">EAT</button>
+      <button data-a="act">DIG<br>BURY</button>
+    </div>
+  </div>
+  <div class="foot">All art and audio are generated in code. No third-party assets.</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const W = 320, H = 180, LEN = 30, MAXC = 4, WIN_YEARS = 3;
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+
+const SEASONS = [
+  {name:'Spring', color:'#8fc35f', ground:'#6c9a48', patch:'#5e8a3d', tuft:'#93c463', can:'#79b84f', hi:'#9fd46e', lo:'#5a9539', bush:'#4f8a36', drain:1.0, speed:1,
+   line:'Rain softens the ground. Caches still buried when spring ends sprout into oaks.', warn:'Spring is ending. Caches left in the ground will sprout.'},
+  {name:'Summer', color:'#e1c54a', ground:'#9fa445', patch:'#8b903b', tuft:'#c4c25c', can:'#3e7b39', hi:'#56963f', lo:'#2c5f2c', bush:'#356b2e', drain:1.55, shade:0.5, speed:1.2,
+   line:'Heat drains you in the open. Oak shade cools you and hides you from the hawk.', warn:'Fall is coming. Sprouts will grow into oaks.'},
+  {name:'Fall', color:'#d8692c', ground:'#96773f', patch:'#86683a', tuft:'#c98a3b', can:'#cf6a2b', hi:'#e8963a', lo:'#a3461f', bush:'#8a5a2a', drain:1.0, speed:1,
+   line:'Oaks drop acorns. Bury them now. Anything left on the ground is lost to the snow.', warn:'Snow is coming. Acorns left on the ground will be lost.'},
+  {name:'Winter', color:'#bcd7e8', ground:'#e3edf2', patch:'#cfdde7', tuft:'#b7cad8', bush:'#7d8f86', drain:1.75, speed:0.7,
+   line:'The ground is frozen and snow hides your caches. Follow your nose to dig them up.', warn:'The thaw is close. Hold on.'}
+];
+
+/* ---------- settings ---------- */
+const DEFAULT_KEYS = {up:'KeyW', down:'KeyS', left:'KeyA', right:'KeyD', act:'Space', eat:'KeyE'};
+const ALT = {up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight', act:'KeyJ', eat:'KeyK'};
+const ACT_NAMES = {up:'Up', down:'Down', left:'Left', right:'Right', act:'Dig / bury', eat:'Eat'};
+let opts = {assist:false, contrast:false, calm:false, sound:true, keys:{...DEFAULT_KEYS}};
+let best = 0;
+try { const o = JSON.parse(localStorage.getItem('fa-opts') || 'null'); if (o) opts = {...opts, ...o, keys:{...DEFAULT_KEYS, ...(o.keys||{})}}; best = +localStorage.getItem('fa-best') || 0; } catch(e) {}
+function saveOpts(){ try { localStorage.setItem('fa-opts', JSON.stringify(opts)); } catch(e) {} }
+function keyLabel(c){
+  if (!c) return '?';
+  if (c.startsWith('Key')) return c.slice(3);
+  if (c.startsWith('Digit')) return c.slice(5);
+  return ({Space:'Space', ArrowUp:'↑', ArrowDown:'↓', ArrowLeft:'←', ArrowRight:'→', ShiftLeft:'Shift', ShiftRight:'Shift', Enter:'Enter'})[c] || c;
+}
+
+/* ---------- audio (all synthesised) ---------- */
+const audio = {ctx:null, master:null, noiseBuf:null};
+function initAudio(){
+  if (audio.ctx) { if (audio.ctx.state === 'suspended') audio.ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+  try {
+    audio.ctx = new AC(); audio.master = audio.ctx.createGain(); audio.master.gain.value = 0.55; audio.master.connect(audio.ctx.destination);
+    const b = audio.ctx.createBuffer(1, audio.ctx.sampleRate * 0.5, audio.ctx.sampleRate); const d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; audio.noiseBuf = b;
+  } catch(e) { audio.ctx = null; }
+}
+function tone(f, d, type='square', v=0.06, slide=0, at=0){
+  if (!audio.ctx || !opts.sound) return;
+  const c = audio.ctx, t = at || c.currentTime, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (slide) o.frequency.linearRampToValueAtTime(Math.max(30, f + slide), t + d);
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(audio.master); o.start(t); o.stop(t + d + 0.03);
+}
+function noise(d, v=0.1, freq=800){
+  if (!audio.ctx || !opts.sound) return;
+  const c = audio.ctx, t = c.currentTime, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = audio.noiseBuf; f.type = 'lowpass'; f.frequency.value = freq;
+  g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  s.connect(f); f.connect(g); g.connect(audio.master); s.start(t); s.stop(t + d + 0.02);
+}
+function sfx(n){
+  if (!audio.ctx || !opts.sound) return;
+  const t = audio.ctx.currentTime;
+  switch(n){
+    case 'pick': tone(760, .07, 'square', .05, 380); break;
+    case 'eat': tone(523, .07, 'square', .05); tone(784, .1, 'square', .05, 0, t + .07); break;
+    case 'berry': tone(1046, .06, 'triangle', .07, 200); break;
+    case 'bury': noise(.14, .16, 500); tone(180, .08, 'triangle', .06, -60); break;
+    case 'dig': noise(.18, .12, 1400); tone(420, .1, 'square', .04, 300, t + .08); break;
+    case 'nope': tone(150, .12, 'square', .05, -40); break;
+    case 'frozen': tone(1800, .05, 'triangle', .04); tone(1400, .08, 'triangle', .04, 0, t + .05); break;
+    case 'hawk': tone(1500, .55, 'sawtooth', .03, -950); tone(1300, .4, 'sawtooth', .02, -700, t + .6); break;
+    case 'hit': noise(.3, .25, 500); tone(110, .35, 'square', .09, -50); break;
+    case 'season': [0, 4, 7, 12].forEach((s, i) => tone(523 * 2 ** (s / 12), .3, 'triangle', .06, 0, t + i * .09)); break;
+    case 'sprout': [0, 5, 9].forEach((s, i) => tone(660 * 2 ** (s / 12), .16, 'sine', .07, 0, t + i * .07)); break;
+    case 'over': [7, 3, 0, -5].forEach((s, i) => tone(392 * 2 ** (s / 12), .35, 'triangle', .07, 0, t + i * .2)); break;
+    case 'win': [0, 4, 7, 12, 16, 19, 24].forEach((s, i) => tone(523 * 2 ** (s / 12), .3, 'triangle', .06, 0, t + i * .1)); break;
+  }
+}
+const SCALES = [[0,2,4,7,9,12,14],[0,2,4,6,7,9,11,12],[0,3,5,7,10,12],[0,3,7,10,12]];
+const ROOTS = [392, 349.2, 293.7, 261.6], BPM = [112, 124, 96, 70];
+const PAT = [0,2,4,2,5,3,1,4];
+let mStep = 0, mNext = 0;
+function music(){
+  if (!audio.ctx || !opts.sound || !S || S.mode !== 'play') { mNext = 0; return; }
+  const c = audio.ctx;
+  if (mNext < c.currentTime) mNext = c.currentTime + 0.05;
+  while (mNext < c.currentTime + 0.25){
+    const s = S.season, sc = SCALES[s], beat = 60 / BPM[s] / 2;
+    const deg = (PAT[mStep % 8] + (Math.floor(mStep / 8) % 2)) % sc.length;
+    if (s !== 3 || mStep % 2 === 0) tone(ROOTS[s] * 2 ** (sc[deg] / 12), beat * .9, 'triangle', s === 3 ? .03 : .028, 0, mNext);
+    if (mStep % 8 === 0) tone(ROOTS[s] / 2, beat * 3.5, 'sine', .07, 0, mNext);
+    mNext += beat; mStep++;
+  }
+}
+
+/* ---------- static world ---------- */
+function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const sr = mulberry(11);
+const TUFTS = Array.from({length:110}, () => ({x:Math.floor(sr() * W), y:Math.floor(6 + sr() * (H - 8)), v:sr()}));
+const ROCKS = [{x:28,y:36,r:5},{x:300,y:118,r:4},{x:150,y:168,r:5},{x:110,y:22,r:3}];
+const BUSHES = [{x:36,y:148},{x:286,y:30},{x:262,y:158}];
+const START_OAKS = [{x:70,y:72},{x:208,y:118},{x:256,y:70}];
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+/* ---------- state ---------- */
+let S = null;
+function newState(){
+  return {
+    mode:'title', year:1, season:0, t:0, energy:75, cheeks:0, inv:0, shake:0, clock:0, endless:false,
+    player:{x:150, y:98, dir:1, moving:false, anim:0},
+    trees:START_OAKS.map(o => ({x:o.x, y:o.y, stage:'oak', drop:rnd(.5, 2)})),
+    caches:[{x:122,y:84},{x:176,y:76},{x:140,y:136}],
+    acorns:[], berries:BUSHES.map(() => 0), bushT:0, berryCd:0,
+    hawk:{phase:'none', timer:7, x:0, y:0, max:1},
+    puddles:[], drifts:[], prints:[], printT:0, fx:[], sniffT:0,
+    stats:{buried:0, dug:0, eaten:0, berries:0, sprouted:0, grown:0, hits:0, lost:0},
+    warned:false
+  };
+}
+
+function startSeason(i, extra){
+  S.season = i; S.t = 0; S.warned = false;
+  S.puddles = []; S.drifts = []; S.prints = [];
+  if (i === 0){
+    for (let k = 0; k < 5; k++) S.puddles.push({x:rnd(30, W - 30), y:rnd(25, H - 15), rx:Math.round(rnd(9, 16)), ry:Math.round(rnd(4, 7))});
+    const oaks = S.trees.filter(t => t.stage === 'oak');
+    for (let k = 0; k < 3 && oaks.length; k++){ const o = oaks[k % oaks.length]; addAcorn(o.x + rnd(-12, 12), o.y + rnd(-2, 8), 0); }
+  }
+  if (i === 1){ S.berries = BUSHES.map(() => 2); S.bushT = 0; }
+  if (i === 3){ for (let k = 0; k < 6; k++) S.drifts.push({x:rnd(20, W - 20), y:rnd(20, H - 12), rx:Math.round(rnd(12, 22)), ry:Math.round(rnd(5, 8))}); }
+  const yr = S.year;
+  S.hawk = {phase:'none', timer: i === 1 ? rnd(4, 6) : rnd(9, 13), x:0, y:0, max:1};
+  if (i === 2 && yr < 2) S.hawk.timer = 999;
+  if (i === 0 || i === 3) S.hawk.timer = 999;
+  showBanner(SEASONS[i].name + (i === 0 ? ' · Year ' + yr : ''), SEASONS[i].line, extra || '');
+  sfx('season');
+}
+
+function addAcorn(x, y, z){ S.acorns.push({x:clamp(x, 6, W - 6), y:clamp(y, 8, H - 4), z:z || 0}); }
+function canSprout(c){
+  if (S.trees.length >= 22) return false;
+  return S.trees.every(t => dist(t.x, t.y, c.x, c.y) >= 18);
+}
+
+function advanceSeason(){
+  const s = S.season; let extra = '';
+  if (s === 0){
+    let n = 0;
+    S.caches = S.caches.filter(c => { if (canSprout(c)){ S.trees.push({x:c.x, y:c.y, stage:'sprout', drop:1}); n++; return false; } return true; });
+    S.stats.sprouted += n;
+    extra = n ? n + (n === 1 ? ' forgotten cache sprouted.' : ' forgotten caches sprouted.') : 'No caches were left to sprout.';
+    if (n) setTimeout(() => sfx('sprout'), 400);
+  }
+  if (s === 1){
+    let n = 0; S.trees.forEach(t => { if (t.stage === 'sprout'){ t.stage = 'oak'; t.drop = rnd(.5, 2); n++; } });
+    S.stats.grown += n;
+    extra = n ? n + (n === 1 ? ' sprout grew into an oak.' : ' sprouts grew into oaks.') : '';
+  }
+  if (s === 2){
+    const n = S.acorns.length; S.acorns = []; S.stats.lost += n;
+    extra = n ? n + ' acorns were lost under the snow.' : 'You left nothing on the ground.';
+  }
+  if (s === 3){
+    S.year++;
+    if (S.year > WIN_YEARS && !S.endless){ finish(true); return; }
+  }
+  startSeason((s + 1) % 4, extra);
+}
+
+/* ---------- input ---------- */
+const held = new Set(), pressed = new Set(), touch = {};
+let rebinding = null;
+function actionOf(code){ for (const a in opts.keys){ if (opts.keys[a] === code || ALT[a] === code) return a; } return null; }
+addEventListener('keydown', e => {
+  if (rebinding){
+    e.preventDefault();
+    if (e.code !== 'Escape'){
+      const other = Object.keys(opts.keys).find(k => opts.keys[k] === e.code && k !== rebinding);
+      if (other) opts.keys[other] = opts.keys[rebinding];
+      opts.keys[rebinding] = e.code; saveOpts();
+    }
+    rebinding = null; renderKeys(); return;
+  }
+  if (e.code === 'Escape' || e.code === 'KeyP'){ if (S.mode === 'play' || S.mode === 'pause'){ e.preventDefault(); togglePause(); } return; }
+  if (e.code === 'KeyM'){ setSound(!opts.sound); return; }
+  const a = actionOf(e.code);
+  if (a && S.mode === 'play'){ e.preventDefault(); if (!held.has(a)) pressed.add(a); held.add(a); }
+  if (S.mode === 'title' && (e.code === 'Enter') && !$('ovTitle').hidden){ e.preventDefault(); play(); }
+});
+addEventListener('keyup', e => { const a = actionOf(e.code); if (a) held.delete(a); });
+addEventListener('blur', () => { held.clear(); if (S && S.mode === 'play') togglePause(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && S && S.mode === 'play') togglePause(); });
+const isHeld = a => held.has(a) || !!touch[a];
+
+document.querySelectorAll('.pad button').forEach(b => {
+  const a = b.dataset.a;
+  const on = e => { e.preventDefault(); initAudio(); if (!touch[a]) pressed.add(a); touch[a] = true; b.classList.add('held'); };
+  const off = e => { e.preventDefault(); touch[a] = false; b.classList.remove('held'); };
+  b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
+  b.addEventListener('contextmenu', e => e.preventDefault());
+});
+if (matchMedia('(pointer:coarse)').matches) $('pad').classList.add('on');
+
+/* ---------- actions ---------- */
+function fxText(x, y, text, color){ S.fx.push({k:'t', x, y, text, color:color || '#f2e7d3', life:1.1}); }
+function dust(x, y, color, n){ for (let i = 0; i < (opts.calm ? 3 : n || 7); i++) S.fx.push({k:'p', x, y, vx:rnd(-25, 25), vy:rnd(-30, -5), life:rnd(.3, .6), color}); }
+function nearestCache(r){ const p = S.player; let bestC = null, bd = r; for (const c of S.caches){ const d = dist(c.x, c.y, p.x, p.y); if (d < bd){ bd = d; bestC = c; } } return bestC; }
+function eatAcorn(fromCheeks){
+  if (fromCheeks) S.cheeks--;
+  S.energy = Math.min(100, S.energy + 22); S.stats.eaten++;
+  fxText(S.player.x, S.player.y - 16, '+22', '#93b45c'); sfx('eat');
+}
+function doAction(){
+  const p = S.player, c = nearestCache(8);
+  if (c){
+    S.caches.splice(S.caches.indexOf(c), 1); S.stats.dug++;
+    dust(c.x, c.y, S.season === 3 ? '#ffffff' : '#5a3e26', 9); sfx('dig');
+    if (S.cheeks < MAXC){ S.cheeks++; fxText(c.x, c.y - 8, 'dug up'); }
+    else eatAcorn(false);
+    return;
+  }
+  if (S.cheeks > 0){
+    if (S.season === 3){ fxText(p.x, p.y - 16, 'frozen', '#bcd7e8'); sfx('frozen'); return; }
+    S.caches.push({x:Math.round(p.x), y:Math.round(p.y + 1)}); S.cheeks--; S.stats.buried++;
+    dust(p.x, p.y, '#5a3e26', 7); sfx('bury'); return;
+  }
+  sfx('nope');
+}
+function doEat(){ if (S.cheeks > 0 && S.energy < 100) eatAcorn(true); else if (S.cheeks > 0) { fxText(S.player.x, S.player.y - 16, 'full'); sfx('nope'); } else sfx('nope'); }
+
+function inShade(x, y){ return S.trees.some(t => t.stage === 'oak' && dist(t.x, t.y - 8, x, y) < 15); }
+function inPool(list, x, y){ return list.some(q => ((x - q.x) / q.rx) ** 2 + ((y - q.y) / q.ry) ** 2 < 1); }
+
+/* ---------- update ---------- */
+function update(dt){
+  const se = SEASONS[S.season], p = S.player;
+  S.clock += dt; S.t += dt;
+  if (S.t >= LEN){ advanceSeason(); return; }
+  if (!S.warned && LEN - S.t < 6){ S.warned = true; }
+
+  // move
+  let dx = (isHeld('right') ? 1 : 0) - (isHeld('left') ? 1 : 0), dy = (isHeld('down') ? 1 : 0) - (isHeld('up') ? 1 : 0);
+  const m = Math.hypot(dx, dy);
+  let sp = 55 * se.speed;
+  if (S.season === 0 && inPool(S.puddles, p.x, p.y)) sp *= .5;
+  if (S.season === 3 && inPool(S.drifts, p.x, p.y)) sp *= .55;
+  p.moving = m > 0;
+  if (m){ p.x = clamp(p.x + dx / m * sp * dt, 6, W - 6); p.y = clamp(p.y + dy / m * sp * dt, 12, H - 4); if (dx) p.dir = dx > 0 ? 1 : -1; p.anim += dt * sp * .25; }
+  if (S.season === 3 && p.moving){ S.printT -= dt; if (S.printT <= 0){ S.printT = .14; S.prints.push({x:p.x, y:p.y, life:6}); if (S.prints.length > 70) S.prints.shift(); } }
+  S.prints.forEach(f => f.life -= dt);
+
+  // energy
+  const shade = inShade(p.x, p.y);
+  let drain = se.drain;
+  if (S.season === 1 && shade) drain = se.shade;
+  drain *= 1 + .12 * (S.year - 1);
+  if (opts.assist) drain *= .7;
+  S.energy -= drain * dt;
+
+  // pickups
+  for (let i = S.acorns.length - 1; i >= 0; i--){
+    const a = S.acorns[i];
+    if (a.z > 0){ a.z = Math.max(0, a.z - 60 * dt); continue; }
+    if (dist(a.x, a.y, p.x, p.y) < 6){
+      if (S.cheeks < MAXC){ S.acorns.splice(i, 1); S.cheeks++; sfx('pick'); }
+      else if (!S.fullT || S.clock - S.fullT > 1.2){ S.fullT = S.clock; fxText(p.x, p.y - 16, 'cheeks full'); }
+    }
+  }
+  S.berryCd -= dt;
+  if (S.season === 1){
+    S.bushT += dt;
+    if (S.bushT > 5){ S.bushT = 0; S.berries = S.berries.map(b => Math.min(3, b + 1)); }
+    BUSHES.forEach((b, i) => {
+      if (S.berries[i] > 0 && S.berryCd <= 0 && dist(b.x, b.y - 2, p.x, p.y) < 9){
+        S.berries[i]--; S.berryCd = .45; S.energy = Math.min(100, S.energy + 9); S.stats.berries++;
+        fxText(b.x, b.y - 12, '+9', '#93b45c'); sfx('berry');
+      }
+    });
+  }
+
+  // actions
+  if (pressed.has('act')) doAction();
+  if (pressed.has('eat')) doEat();
+
+  // fall acorn drops
+  if (S.season === 2){
+    S.trees.forEach(t => {
+      if (t.stage !== 'oak') return;
+      t.drop -= dt;
+      if (t.drop <= 0){ t.drop = rnd(1.6, 2.8); if (S.acorns.length < 34) addAcorn(t.x + rnd(-14, 14), t.y + rnd(-6, 8), 22); }
+    });
+  }
+
+  // hawk
+  const h = S.hawk;
+  if (h.phase === 'none'){
+    h.timer -= dt;
+    if (h.timer <= 0){ h.phase = 'hunt'; h.timer = 3.2; const side = Math.random() < .5 ? -1 : 1; h.x = clamp(p.x + side * 140, -30, W + 30); h.y = clamp(p.y + rnd(-50, 50), 10, H - 10); sfx('hawk'); }
+  } else if (h.phase === 'hunt'){
+    h.timer -= dt; const d = dist(h.x, h.y, p.x, p.y) || 1, v = 62 + 6 * (S.year - 1);
+    h.x += (p.x - h.x) / d * Math.min(d, v * dt); h.y += (p.y - h.y) / d * Math.min(d, v * dt);
+    if (h.timer <= 0){ h.phase = 'dive'; h.timer = .7; }
+  } else if (h.phase === 'dive'){
+    h.timer -= dt;
+    if (h.timer <= 0){
+      if (dist(h.x, h.y, p.x, p.y) < 13 && !inShade(p.x, p.y) && S.inv <= 0){
+        S.energy -= 22; S.stats.hits++; S.inv = 1.5; S.shake = .4; sfx('hit');
+        fxText(p.x, p.y - 18, '-22', '#e65a43');
+        for (let k = 0; k < S.cheeks; k++) addAcorn(p.x + rnd(-16, 16), p.y + rnd(-10, 10), 6);
+        if (S.cheeks) fxText(p.x, p.y - 26, 'dropped acorns', '#e0973f');
+        S.cheeks = 0;
+      }
+      h.phase = 'none';
+      h.timer = S.season === 1 ? rnd(6, 10) / (1 + .15 * (S.year - 1)) : rnd(11, 16);
+    }
+  }
+  S.inv = Math.max(0, S.inv - dt); S.shake = Math.max(0, S.shake - dt);
+
+  // winter sniffing
+  if (S.season === 3){
+    S.sniffT -= dt;
+    if (S.sniffT <= 0){
+      S.sniffT = .28;
+      S.caches.forEach(c => { if (dist(c.x, c.y, p.x, p.y) < 24) S.fx.push({k:'s', x:c.x + rnd(-2, 2), y:c.y, vx:rnd(-4, 4), vy:-12, life:.9}); });
+    }
+  }
+
+  // fx
+  S.fx.forEach(f => { f.life -= dt; if (f.k === 'p' || f.k === 's'){ f.x += f.vx * dt; f.y += f.vy * dt; if (f.k === 'p') f.vy += 90 * dt; } else f.y -= 12 * dt; });
+  S.fx = S.fx.filter(f => f.life > 0);
+
+  if (S.energy <= 0){ S.energy = 0; finish(false); }
+}
+
+/* ---------- drawing ---------- */
+function R(x, y, w, h, c){ ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); }
+function E(cx, cy, rx, ry, c){
+  ctx.fillStyle = c; cx = Math.round(cx); cy = Math.round(cy); ry = Math.max(1, ry);
+  for (let dy = -ry; dy <= ry; dy++){ const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - (dy * dy) / (ry * ry)))); ctx.fillRect(cx - w, cy + dy, w * 2 + 1, 1); }
+}
+const HC = () => opts.contrast;
+
+function drawSquirrel(x, y, dir, anim, cheeks, flash){
+  x = Math.round(x); y = Math.round(y);
+  const f = '#b5602a', t = '#cf7a3a', lt = '#ecc48e', dk = '#2c1a10';
+  const X = o => x + o * dir;
+  ctx.globalAlpha = .28; E(x, y, 6, 2, '#000'); ctx.globalAlpha = 1;
+  if (flash && Math.floor(S.clock * 12) % 2) ctx.globalAlpha = .4;
+  if (HC()){ E(X(-4), y - 8, 5, 7, '#ffffff'); E(x, y - 4, 6, 4, '#ffffff'); E(X(4), y - 8, 4, 4, '#ffffff'); }
+  const bob = Math.floor(anim) % 2;
+  // tail
+  E(X(-4), y - 8 - bob, 3, 6, t); E(X(-5), y - 13 - bob, 2, 2, t); R(X(-4) - (dir > 0 ? 1 : 0), y - 10 - bob, 1, 4, lt);
+  // body
+  E(x, y - 4, 4, 3, f); R(X(1) - (dir > 0 ? 0 : 1), y - 4, 2, 3, lt);
+  // head
+  E(X(4), y - 8, 3, 3, f);
+  R(X(3), y - 12, 1, 2, f); R(X(3), y - 13, 1, 1, dk);
+  R(X(5), y - 9, 1, 1, dk);
+  R(X(7), y - 8, 1, 1, dk);
+  if (cheeks > 0) E(X(5), y - 6, cheeks > 2 ? 2 : 1, cheeks > 2 ? 2 : 1, lt);
+  // feet
+  R(X(-2) + (bob ? 1 : 0), y - 1, 2, 1, dk); R(X(2) - (bob ? 1 : 0), y - 1, 2, 1, dk);
+  ctx.globalAlpha = 1;
+}
+function drawAcorn(x, y, z){
+  x = Math.round(x); y = Math.round(y - (z || 0));
+  if (HC()) R(x - 2, y - 4, 5, 7, '#ffffff');
+  R(x - 1, y - 3, 3, 1, '#4a2e1b'); R(x, y - 4, 1, 1, '#4a2e1b');
+  R(x - 1, y - 2, 3, 3, '#b8742f'); R(x, y + 1, 1, 1, '#b8742f'); R(x - 1, y - 2, 1, 1, '#d99a52');
+}
+function drawTrunk(tr, s){
+  const x = Math.round(tr.x), y = Math.round(tr.y);
+  ctx.globalAlpha = .22; E(x, y, 9, 3, '#000'); ctx.globalAlpha = 1;
+  R(x - 2, y - 10, 4, 10, '#5b3a24'); R(x - 2, y - 10, 1, 10, '#73502f'); R(x - 3, y - 1, 7, 1, '#4a2f1d');
+  if (s === 3){
+    R(x - 1, y - 22, 2, 12, '#5b3a24'); R(x - 7, y - 17, 6, 1, '#5b3a24'); R(x + 1, y - 19, 7, 1, '#5b3a24');
+    R(x - 8, y - 21, 1, 4, '#5b3a24'); R(x + 7, y - 24, 1, 5, '#5b3a24'); R(x - 4, y - 25, 1, 4, '#5b3a24');
+    R(x - 7, y - 18, 5, 1, '#ffffff'); R(x + 2, y - 20, 5, 1, '#ffffff'); R(x - 1, y - 23, 2, 1, '#ffffff'); R(x - 8, y - 22, 1, 1, '#ffffff'); R(x + 7, y - 25, 1, 1, '#ffffff');
+  }
+}
+function drawCanopy(tr, s, see){
+  if (s === 3) return;
+  const se = SEASONS[s], x = Math.round(tr.x), y = Math.round(tr.y) - 17;
+  if (see) ctx.globalAlpha = .45;
+  E(x, y + 1, 13, 10, se.lo); E(x - 1, y - 1, 12, 9, se.can); E(x - 4, y - 4, 6, 4, se.hi);
+  const dots = [[5,2],[-6,3],[2,-5],[8,-2],[-9,-1],[-2,5]];
+  dots.forEach(([a, b], i) => R(x + a, y + b, 2, 1, i % 2 ? se.lo : se.hi));
+  if (s === 0){ [[-5,-2],[4,-4],[7,3],[-8,4],[0,2]].forEach(([a, b]) => R(x + a, y + b, 1, 1, '#f3c3d4')); }
+  if (s === 2){ [[-5,-2],[4,-4],[7,3],[-8,4],[0,2],[3,6]].forEach(([a, b], i) => R(x + a, y + b, 1, 1, i % 2 ? '#f0c247' : '#8e2e17')); }
+  ctx.globalAlpha = 1;
+}
+function drawSprout(tr, s){
+  const x = Math.round(tr.x), y = Math.round(tr.y);
+  E(x, y, 3, 1, s === 3 ? '#c9d6df' : '#5a3e26');
+  if (s === 3){ R(x, y - 4, 1, 4, '#6b4a30'); R(x, y - 5, 1, 1, '#ffffff'); return; }
+  const g = s === 2 ? '#c98a3b' : '#5fae3e';
+  R(x, y - 6, 1, 6, '#4f7a2f'); R(x - 3, y - 5, 3, 2, g); R(x + 1, y - 7, 3, 2, g); R(x - 2, y - 6, 1, 1, '#9fd46e');
+}
+function drawCache(c, s){
+  const x = Math.round(c.x), y = Math.round(c.y);
+  if (s === 3){
+    if (opts.assist){ R(x - 2, y - 2, 1, 1, '#7a8fa0'); R(x + 2, y - 2, 1, 1, '#7a8fa0'); R(x, y, 1, 1, '#7a8fa0'); R(x - 2, y + 2, 1, 1, '#7a8fa0'); R(x + 2, y + 2, 1, 1, '#7a8fa0'); R(x - 1, y - 1, 3, 3, '#9eb1c0'); }
+    return;
+  }
+  if (HC()){ R(x - 4, y - 3, 9, 5, '#ffffff'); }
+  E(x, y, 3, 1, '#4c321e'); R(x - 2, y - 2, 5, 1, '#6e4c2f'); R(x - 1, y - 3, 3, 1, '#7d5836');
+  if (HC()){ R(x - 1, y - 1, 1, 1, '#000'); R(x + 1, y - 1, 1, 1, '#000'); }
+}
+function drawBush(b, i, s){
+  const se = SEASONS[s], x = b.x, y = b.y;
+  ctx.globalAlpha = .22; E(x, y + 1, 8, 2, '#000'); ctx.globalAlpha = 1;
+  E(x, y - 4, 8, 5, se.bush); E(x - 2, y - 6, 4, 3, s === 3 ? '#93a59b' : se.hi || se.bush);
+  if (s === 3){ E(x, y - 8, 6, 2, '#ffffff'); }
+  if (s === 1){
+    const pos = [[-4,-4],[3,-6],[4,-2]];
+    for (let k = 0; k < S.berries[i]; k++){ const [a, c] = pos[k]; if (HC()) R(x + a - 1, y + c - 1, 4, 4, '#ffffff'); R(x + a, y + c, 2, 2, '#d23b3b'); R(x + a, y + c, 1, 1, '#f08a8a'); }
+  }
+}
+function drawRock(r, s){
+  E(r.x, r.y, r.r + 1, Math.ceil(r.r * .6), '#5d6168'); E(r.x - 1, r.y - 1, r.r, Math.ceil(r.r * .5), '#878c94'); R(r.x - 2, r.y - 2, 2, 1, '#aab0b8');
+  if (s === 3) E(r.x, r.y - 2, r.r, 1, '#ffffff');
+}
+function drawHawk(h){
+  if (h.phase === 'none') return;
+  let sc = 1, a = .26;
+  if (h.phase === 'dive'){ const k = 1 - h.timer / .7; sc = 1 + k * .7; a = .3 + k * .3; }
+  const x = h.x, y = h.y, flap = Math.sin(S.clock * (h.phase === 'dive' ? 4 : 9)) > 0 ? 1 : 0;
+  if (HC() || h.phase === 'dive'){
+    ctx.globalAlpha = h.phase === 'dive' ? .9 : .7;
+    E(x, y, Math.round(15 * sc) + 1, Math.round(4 * sc) + 2, '#e65a43');
+    E(x, y, Math.round(15 * sc), Math.round(4 * sc) + 1, SEASONS[S.season].ground);
+  }
+  ctx.globalAlpha = a;
+  E(x, y, Math.round(14 * sc), Math.round((2 + flap) * sc), '#120c08');
+  E(x, y, Math.round(3 * sc), Math.round(6 * sc), '#120c08');
+  R(x - 2 * sc, y + 6 * sc, Math.round(4 * sc), Math.round(3 * sc), '#120c08');
+  ctx.globalAlpha = 1;
+}
+function pixText(text, x, y, color, box){
+  ctx.font = '8px Silkscreen, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (box){ const w = Math.ceil(ctx.measureText(text).width) + 6; R(x - w / 2, y - 5, w, 10, 'rgba(31,24,19,0.85)'); }
+  ctx.fillStyle = '#1f1813'; ctx.fillText(text, Math.round(x) + 1, Math.round(y) + 1);
+  ctx.fillStyle = color; ctx.fillText(text, Math.round(x), Math.round(y));
+}
+
+function weather(s, tt){
+  const n = opts.calm ? .35 : 1;
+  const wrap = (v, m) => ((v % m) + m) % m;
+  if (s === 0){
+    ctx.fillStyle = 'rgba(200,225,240,0.5)';
+    for (let i = 0; i < 60 * n; i++){ const x = wrap(i * 53.7 + tt * 40, W), y = wrap(i * 97.3 + tt * 190, H + 10) - 5; ctx.fillRect(Math.round(x), Math.round(y), 1, 3); }
+    S.puddles.forEach((q, i) => { const r = (tt * 1.4 + i * .37) % 1; ctx.globalAlpha = 1 - r; E(q.x + ((i * 7) % 9) - 4, q.y, Math.round(2 + r * 5), Math.max(1, Math.round(r * 2)), '#a9cbd8'); ctx.globalAlpha = 1; });
+  } else if (s === 1){
+    ctx.fillStyle = 'rgba(255,245,200,0.7)';
+    for (let i = 0; i < 18 * n; i++){ const x = wrap(i * 61 + Math.sin(tt * .7 + i) * 12 + tt * 6, W), y = wrap(i * 37 - tt * 5, H); ctx.fillRect(Math.round(x), Math.round(y), 1, 1); }
+  } else if (s === 2){
+    const cols = ['#e8963a', '#c2451e', '#f0c247'];
+    for (let i = 0; i < 26 * n; i++){ const x = wrap(i * 71 + tt * 14 + Math.sin(tt * 1.6 + i) * 9, W), y = wrap(i * 43 + tt * 24, H); R(x, y, 2, 1, cols[i % 3]); }
+  } else {
+    ctx.fillStyle = '#ffffff';
+    const k = S.mode === 'play' ? 1 + S.t / LEN : 1;
+    for (let i = 0; i < 80 * n * k; i++){ const x = wrap(i * 41.3 + tt * (10 + 14 * k) + Math.sin(tt + i) * 6, W), y = wrap(i * 29.7 + tt * (18 + i % 3 * 6), H); ctx.fillRect(Math.round(x), Math.round(y), i % 5 ? 1 : 2, 1); }
+  }
+}
+
+function render(tt){
+  const s = S.season, se = SEASONS[s], p = S.player, play = S.mode !== 'title';
+  ctx.save();
+  if (S.shake > 0 && !opts.calm) ctx.translate(Math.round(rnd(-3, 3)), Math.round(rnd(-3, 3)));
+  R(-4, -4, W + 8, H + 8, se.ground);
+  TUFTS.forEach(t => { if (t.v < .3) E(t.x, t.y, 4 + Math.round(t.v * 14), 2, se.patch); });
+  TUFTS.forEach(t => { if (t.v >= .3){ if (s === 3) R(t.x, t.y, 2, 1, se.tuft); else { R(t.x, t.y, 1, 2, se.tuft); R(t.x + 2, t.y - 1, 1, 3, se.tuft); } } });
+  S.puddles.forEach(q => { E(q.x, q.y, q.rx, q.ry, '#4c7a8c'); E(q.x - 2, q.y - 1, Math.max(2, q.rx - 5), 1, '#6f9cae'); });
+  S.drifts.forEach(q => { E(q.x, q.y + 1, q.rx, q.ry, '#c3d3df'); E(q.x, q.y - 1, q.rx - 1, q.ry - 1, '#fbfdfe'); });
+  S.prints.forEach(f => { ctx.globalAlpha = Math.min(1, f.life / 3) * .6; R(f.x - 1, f.y, 1, 1, '#9fb4c4'); R(f.x + 1, f.y - 1, 1, 1, '#9fb4c4'); });
+  ctx.globalAlpha = 1;
+  ROCKS.forEach(r => drawRock(r, s));
+  BUSHES.forEach((b, i) => drawBush(b, i, s));
+  S.caches.forEach(c => drawCache(c, s));
+  S.trees.forEach(t => t.stage === 'oak' ? drawTrunk(t, s) : drawSprout(t, s));
+  S.acorns.forEach(a => { if (a.z <= 0) drawAcorn(a.x, a.y, 0); });
+  drawSquirrel(p.x, p.y, p.dir, p.moving ? p.anim : 0, S.cheeks, S.inv > 0);
+  S.acorns.forEach(a => { if (a.z > 0){ ctx.globalAlpha = .3; E(a.x, a.y, 2, 1, '#000'); ctx.globalAlpha = 1; drawAcorn(a.x, a.y, a.z); } });
+  S.trees.forEach(t => { if (t.stage === 'oak') drawCanopy(t, s, dist(t.x, t.y - 8, p.x, p.y) < 18); });
+  if (play) drawHawk(S.hawk);
+  weather(s, tt);
+  if (s === 1 && play && !inShade(p.x, p.y)){ ctx.fillStyle = 'rgba(255,170,60,0.07)'; ctx.fillRect(0, 0, W, H); }
+  // fx
+  S.fx.forEach(f => {
+    if (f.k === 'p'){ ctx.globalAlpha = Math.min(1, f.life * 3); R(f.x, f.y, 1, 1, f.color); }
+    else if (f.k === 's'){ ctx.globalAlpha = Math.min(1, f.life * 2); R(f.x, f.y, 1, 1, HC() ? '#e65a43' : '#e0973f'); R(f.x + 1, f.y - 2, 1, 1, '#ffffff'); }
+  });
+  ctx.globalAlpha = 1;
+  // winter dark
+  if (s === 3 && play){
+    const k = S.t / LEN, r0 = (opts.assist ? 52 : 38) - k * 10, r1 = (opts.assist ? 115 : 82) - k * 14;
+    const g = ctx.createRadialGradient(p.x, p.y - 5, r0, p.x, p.y - 5, r1);
+    g.addColorStop(0, 'rgba(18,26,44,0)'); g.addColorStop(1, 'rgba(18,26,44,0.9)');
+    ctx.fillStyle = g; ctx.fillRect(-4, -4, W + 8, H + 8);
+  }
+  S.fx.forEach(f => { if (f.k === 't'){ ctx.globalAlpha = Math.min(1, f.life * 2); pixText(f.text, f.x, f.y, f.color, false); } });
+  ctx.globalAlpha = 1;
+  if (play && S.mode === 'play') hints();
+  ctx.restore();
+}
+
+function hints(){
+  const p = S.player, act = keyLabel(opts.keys.act), eat = keyLabel(opts.keys.eat);
+  const touchOn = $('pad').classList.contains('on');
+  const A = touchOn ? 'DIG' : act, B = touchOn ? 'EAT' : eat;
+  if (S.year === 1){
+    const c = nearestCache(22);
+    if (c && S.season !== 3) pixText(A + ' dig', c.x, c.y - 9, '#f2e7d3', true);
+    else if (S.season === 2 && S.cheeks > 0 && S.stats.buried < 4) pixText(A + ' bury', p.x, p.y - 22, '#f2e7d3', true);
+    else if (S.cheeks > 0 && S.energy < 65 && S.stats.eaten < 3) pixText(B + ' eat', p.x, p.y - 22, '#f2e7d3', true);
+    if (S.season === 1 && S.hawk.phase !== 'none' && S.stats.hits === 0) pixText('hide in shade!', clamp(S.hawk.x, 30, W - 30), clamp(S.hawk.y - 14, 8, H - 8), '#e65a43', true);
+    if (S.season === 3 && S.t < 8) pixText('sniff for sparkles', p.x, p.y - 22, '#e0973f', true);
+  }
+  if (S.energy < 20 && Math.floor(S.clock * 3) % 2) pixText('hungry', p.x, p.y - 22, '#e65a43', true);
+}
+
+/* ---------- HUD ---------- */
+let lastHud = '';
+function hud(){
+  const se = SEASONS[S.season], e = Math.max(0, S.energy);
+  const oaks = S.trees.filter(t => t.stage === 'oak').length, sprouts = S.trees.length - oaks;
+  const sig = [S.season, S.year, Math.ceil(e), S.cheeks, oaks, sprouts, S.warned, opts.sound].join('|');
+  $('hPlay').style.left = ((S.season + Math.min(1, S.t / LEN)) / 4 * 100) + '%';
+  if (sig === lastHud) return; lastHud = sig;
+  $('hSeason').style.color = se.color; $('hSeasonName').textContent = se.name;
+  $('hYear').textContent = 'Year ' + S.year + (S.endless ? '' : ' of ' + WIN_YEARS);
+  [...$('hYearBar').querySelectorAll('span')].forEach((sp, i) => sp.classList.toggle('on', i === S.season));
+  $('hFill').style.width = e + '%'; $('hEn').textContent = Math.ceil(e);
+  $('hBar').className = 'bar' + (e < 20 ? ' crit' : e < 40 ? ' low' : '');
+  [...$('hSlots').children].forEach((s, i) => s.classList.toggle('f', i < S.cheeks));
+  $('hTrees').textContent = 'Oaks ' + oaks + (sprouts ? ' +' + sprouts : '');
+  $('hWarn').textContent = S.warned && S.mode === 'play' ? se.warn : '';
+  $('bSound').textContent = opts.sound ? 'SND' : 'MUTE';
+}
+
+let bannerT = 0;
+function showBanner(t, p, x){
+  $('bnT').textContent = t; $('bnT').style.color = SEASONS[S.season].color; $('bnP').textContent = p; $('bnX').textContent = x;
+  $('banner').classList.add('show'); clearTimeout(bannerT); bannerT = setTimeout(() => $('banner').classList.remove('show'), 3600);
+}
+
+/* ---------- screens ---------- */
+const OVS = ['ovTitle', 'ovPause', 'ovEnd', 'ovSet'];
+let setReturn = 'ovTitle';
+function show(id){ OVS.forEach(o => $(o).hidden = o !== id); }
+function focusGame(){ if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); cv.focus({preventScroll:true}); }
+function play(){
+  initAudio(); S = newState(); S.mode = 'play'; show(null); startSeason(0, 'Dig up last year\'s caches and eat to stay warm.'); lastHud = ''; focusGame();
+}
+function togglePause(){
+  if (S.mode === 'play'){ S.mode = 'pause'; held.clear(); show('ovPause'); $('bResume').focus(); }
+  else if (S.mode === 'pause'){ S.mode = 'play'; show(null); focusGame(); initAudio(); }
+}
+function finish(won){
+  const oaks = S.trees.filter(t => t.stage === 'oak').length;
+  S.mode = won ? 'win' : 'over'; held.clear();
+  if (oaks > best){ best = oaks; try { localStorage.setItem('fa-best', best); } catch(e) {} }
+  $('best').textContent = best;
+  $('endEye').textContent = won ? 'You made it' : 'Game over';
+  $('endT').textContent = won ? 'A grove of ' + oaks + ' oaks' : 'Out of energy';
+  $('endP').textContent = won
+    ? 'You survived ' + WIN_YEARS + ' years. ' + (S.stats.sprouted ? 'The ' + S.stats.sprouted + ' caches you forgot are now trees.' : 'You ate every cache, so the forest did not grow.')
+    : 'You ran out in ' + SEASONS[S.season].name + ', year ' + S.year + '. ' + (S.season === 3 ? 'Bury more in the fall and remember where.' : S.season === 1 ? 'Shade slows the heat and blocks the hawk.' : 'Keep a few acorns in your cheeks for emergencies.');
+  const st = [[oaks, 'oaks in grove'], [S.stats.buried, 'acorns buried'], [S.stats.sprouted, 'caches sprouted'], [S.stats.eaten + S.stats.berries, 'things eaten'], [S.stats.lost, 'lost to snow'], [S.stats.hits, 'hawk strikes']];
+  $('endStats').innerHTML = st.map(([v, l]) => '<div><b>' + v + '</b><span>' + l + '</span></div>').join('');
+  $('bEndless').hidden = !won;
+  show('ovEnd'); $('bAgain').focus();
+  sfx(won ? 'win' : 'over');
+}
+
+function renderHow(){
+  const k = opts.keys;
+  const html = [
+    ['<kbd>' + keyLabel(k.up) + keyLabel(k.left) + keyLabel(k.down) + keyLabel(k.right) + '</kbd> <kbd>↑←↓→</kbd>', 'Move'],
+    ['<kbd>' + keyLabel(k.act) + '</kbd>', 'Dig up a cache, or bury an acorn'],
+    ['<kbd>' + keyLabel(k.eat) + '</kbd>', 'Eat an acorn from your cheeks'],
+    ['<kbd>Esc</kbd>', 'Pause'],
+  ].map(([a, b]) => '<div>' + a + '<span>' + b + '</span></div>').join('');
+  $('howKeys').innerHTML = html; $('howKeys2').innerHTML = html;
+}
+function renderKeys(){
+  $('keys').innerHTML = Object.keys(ACT_NAMES).map(a => '<button class="key' + (rebinding === a ? ' wait' : '') + '" data-k="' + a + '" id="key-' + a + '"><span>' + ACT_NAMES[a] + '</span><b>' + (rebinding === a ? 'press a key' : keyLabel(opts.keys[a])) + '</b></button>').join('');
+  $('keys').querySelectorAll('.key').forEach(b => b.addEventListener('click', () => { rebinding = b.dataset.k; renderKeys(); }));
+  renderHow();
+}
+function renderToggles(){
+  [['tAssist', 'assist'], ['tContrast', 'contrast'], ['tCalm', 'calm'], ['tSound', 'sound']].forEach(([id, k]) => {
+    $(id).setAttribute('aria-pressed', opts[k]); $(id).querySelector('em').textContent = opts[k] ? 'ON' : 'OFF';
+  });
+  lastHud = '';
+}
+function setSound(v){ opts.sound = v; saveOpts(); renderToggles(); if (v) initAudio(); }
+[['tAssist', 'assist'], ['tContrast', 'contrast'], ['tCalm', 'calm']].forEach(([id, k]) => $(id).addEventListener('click', () => { opts[k] = !opts[k]; saveOpts(); renderToggles(); }));
+$('tSound').addEventListener('click', () => setSound(!opts.sound));
+$('bSound').addEventListener('click', () => { setSound(!opts.sound); if (S.mode === 'play') focusGame(); });
+$('bPause').addEventListener('click', () => { if (S.mode === 'play' || S.mode === 'pause') togglePause(); });
+$('bPlay').addEventListener('click', play);
+$('bAgain').addEventListener('click', play);
+$('bRestart').addEventListener('click', play);
+$('bResume').addEventListener('click', togglePause);
+$('bEndless').addEventListener('click', () => { S.endless = true; S.mode = 'play'; show(null); startSeason(0, 'Endless mode. Every year is a little harsher.'); focusGame(); });
+const toTitle = () => { const keep = S; S = newState(); S.mode = 'title'; show('ovTitle'); $('bPlay').focus(); };
+$('bQuit').addEventListener('click', toTitle); $('bQuit2').addEventListener('click', toTitle);
+$('bSet1').addEventListener('click', () => { setReturn = 'ovTitle'; show('ovSet'); $('bBack').focus(); });
+$('bSet2').addEventListener('click', () => { setReturn = 'ovPause'; show('ovSet'); $('bBack').focus(); });
+$('bBack').addEventListener('click', () => { rebinding = null; renderKeys(); show(setReturn); });
+$('bResetKeys').addEventListener('click', () => { opts.keys = {...DEFAULT_KEYS}; saveOpts(); renderKeys(); });
+cv.addEventListener('pointerdown', () => { initAudio(); if (S.mode === 'play') cv.focus(); });
+
+/* ---------- loop ---------- */
+let last = performance.now();
+function loop(now){
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (S.mode === 'play') update(dt);
+  else if (S.mode === 'title'){ S.season = Math.floor(now / 3500) % 4; S.clock = now / 1000; }
+  render(now / 1000);
+  if (S.mode === 'play' || S.mode === 'pause') hud();
+  music();
+  pressed.clear();
+  requestAnimationFrame(loop);
+}
+
+function start(data){
+  renderToggles(); renderKeys(); $('best').textContent = best;
+  if (data && data.S && data.S.player){
+    S = data.S; S.fx = S.fx || [];
+    if (S.mode === 'play'){ S.mode = 'pause'; show('ovPause'); } else if (S.mode === 'title') show('ovTitle'); else show(S.mode === 'pause' ? 'ovPause' : 'ovTitle');
+    if (S.mode !== 'pause' && S.mode !== 'title'){ S = newState(); show('ovTitle'); }
+  } else { S = newState(); show('ovTitle'); }
+  requestAnimationFrame(loop);
+}
+window.claude?.hot?.snapshot?.(() => ({S}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>

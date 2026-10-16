@@ -1,0 +1,30 @@
+{
+ "w": 36,
+ "h": 22,
+ "anims": {
+  "run": {
+   "row": 0,
+   "n": 4,
+   "fps": 10,
+   "loop": true
+  },
+  "idle": {
+   "row": 1,
+   "n": 2,
+   "fps": 4,
+   "loop": true
+  },
+  "bark": {
+   "row": 2,
+   "n": 2,
+   "fps": 5,
+   "loop": true
+  },
+  "sniff": {
+   "row": 3,
+   "n": 2,
+   "fps": 3,
+   "loop": true
+  }
+ }
+}

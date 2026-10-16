@@ -1,0 +1,6 @@
+# Godot cache
+game/.godot/
+# the Windows runtime is 180 MB (over GitHub's 100 MB limit): ship it in a Release zip
+builds/windows/*.exe
+tools/__pycache__/
+builds/*.zip

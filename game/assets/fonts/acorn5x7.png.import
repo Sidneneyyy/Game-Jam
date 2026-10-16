@@ -1,0 +1,25 @@
+[remap]
+
+importer="font_data_image"
+type="FontFile"
+uid="uid://bacorn5x7font"
+path="res://.godot/imported/acorn5x7.png-e69aa96db5e69988b2b1132ce4214a68.fontdata"
+
+[deps]
+
+source_file="res://assets/fonts/acorn5x7.png"
+dest_files=["res://.godot/imported/acorn5x7.png-e69aa96db5e69988b2b1132ce4214a68.fontdata"]
+
+[params]
+
+character_ranges=PackedStringArray("32-126")
+kerning_pairs=PackedStringArray()
+columns=16
+rows=6
+image_margin=Rect2i(0, 0, 0, 0)
+character_margin=Rect2i(0, 0, 0, 0)
+ascent=0
+descent=0
+fallbacks=[]
+compress=true
+scaling_mode=2

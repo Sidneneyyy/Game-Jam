@@ -59,7 +59,7 @@ ANSWERS TO YOUR QUESTIONS
 3. Network analysis: show it as built ONLY if you confirm by running it that the
    /players/{id}/network endpoint works and the validation file has the Network row. Keep Jube
    as roadmap (the repo only has a mock), and mention the HANDOFF contradiction in your report.
-   Keep the CBN Crash Game feed as roadmap (draft contract).
+   Keep the CBN Crash Game feed as roadmap (draft contract). 
 
 KEEP ALL EARLIER RULES
 - The OLG challenge brief is confidential: never copy or quote it. All data is synthetic.
